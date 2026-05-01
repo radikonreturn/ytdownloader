@@ -1,178 +1,133 @@
-import { useState, useEffect, useRef } from 'react';
-import { invoke } from '@tauri-apps/api/tauri';
-import { listen } from '@tauri-apps/api/event';
+import { useState, useEffect, useRef } from "react";
+import { invoke } from "@tauri-apps/api/tauri";
+import { listen } from "@tauri-apps/api/event";
+import { save } from "@tauri-apps/api/dialog";
 
 function App() {
-  const [packages, setPackages] = useState([]);
-  const [outdated, setOutdated] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [filterOutdated, setFilterOutdated] = useState(false);
-  const [selected, setSelected] = useState(new Set());
-  const [logs, setLogs] = useState('');
-  
+  const [url, setUrl] = useState("");
+  const [startTime, setStartTime] = useState("00:00:00");
+  const [endTime, setEndTime] = useState("00:00:30");
+  const [savePath, setSavePath] = useState("");
+  const [logs, setLogs] = useState([]);
+  const [isDownloading, setIsDownloading] = useState(false);
   const logEndRef = useRef(null);
 
   useEffect(() => {
-    fetchPackages();
-    
-    const unlistenPromise = listen('update-log', (event) => {
-      setLogs((prev) => prev + event.payload + '\n');
+    const unlisten = listen("download-log", (event) => {
+      setLogs((prev) => [...prev, event.payload]);
     });
 
     return () => {
-      unlistenPromise.then(unlisten => unlisten());
+      unlisten.then((fn) => fn());
     };
   }, []);
 
   useEffect(() => {
-    if (logEndRef.current) {
-      logEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  const fetchPackages = async () => {
-    setLoading(true);
-    setLogs((prev) => prev + '> Fetching global packages...\n');
+  const handleSelectPath = async () => {
     try {
-      const pkgsStr = await invoke('get_global_packages');
-      const pkgsData = JSON.parse(pkgsStr);
-      const dependencies = pkgsData.dependencies || {};
-      
-      const pkgList = Object.keys(dependencies).map(name => ({
-        name,
-        version: dependencies[name].version
-      }));
-      setPackages(pkgList);
-      
-      setLogs((prev) => prev + '> Checking for outdated packages...\n');
-      const outStr = await invoke('get_outdated_packages');
-      const outData = JSON.parse(outStr);
-      setOutdated(outData || {});
-      
-      setLogs((prev) => prev + '> Package list updated.\n');
-    } catch (e) {
-      setLogs((prev) => prev + `Error: ${e}\n`);
-    } finally {
-      setLoading(false);
+      const selected = await save({
+        filters: [{ name: "Video", extensions: ["mp4"] }],
+        defaultPath: "clip.mp4",
+      });
+      if (selected) {
+        setSavePath(selected);
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  const handleSelectAll = (e) => {
-    if (e.target.checked) {
-      setSelected(new Set(visiblePackages.map(p => p.name)));
-    } else {
-      setSelected(new Set());
+  const startDownload = async () => {
+    if (!url || !savePath) {
+      alert("Please provide a URL and select a save location.");
+      return;
     }
-  };
 
-  const handleSelect = (name) => {
-    const next = new Set(selected);
-    if (next.has(name)) {
-      next.delete(name);
-    } else {
-      next.add(name);
-    }
-    setSelected(next);
-  };
+    setLogs([]);
+    setIsDownloading(true);
 
-  const updateSelected = async () => {
-    if (selected.size === 0) return;
-    const targets = Array.from(selected);
-    await runUpdate(targets);
-  };
-
-  const updateAll = async () => {
-    const targets = visiblePackages.map(p => p.name);
-    if (targets.length === 0) return;
-    await runUpdate(targets);
-  };
-
-  const runUpdate = async (targets) => {
-    setLoading(true);
-    setLogs((prev) => prev + `> npm install -g ${targets.join(' ')}\n`);
     try {
-      await invoke('update_packages', { packages: targets });
-      setLogs((prev) => prev + '> Update complete.\n');
-      await fetchPackages();
-    } catch (e) {
-      setLogs((prev) => prev + `Error: ${e}\n`);
+      await invoke("download_video", {
+        args: {
+          url,
+          start_time: startTime,
+          end_time: endTime,
+          save_path: savePath,
+        },
+      });
+    } catch (err) {
+      setLogs((prev) => [...prev, { message: `Error: ${err}`, level: "error" }]);
     } finally {
-      setLoading(false);
+      setIsDownloading(false);
     }
   };
-
-  const visiblePackages = packages.filter(p => !filterOutdated || outdated[p.name]);
 
   return (
-    <div className="app-container">
-      <div className="left-pane">
-        <div className="toolbar">
-          <button onClick={fetchPackages} disabled={loading}>Refresh</button>
-          <label>
-            <input 
-              type="checkbox" 
-              checked={filterOutdated} 
-              onChange={(e) => setFilterOutdated(e.target.checked)} 
-            />
-            Outdated Only
-          </label>
-          <div style={{ flex: 1 }}></div>
-          <button onClick={updateSelected} disabled={loading || selected.size === 0}>
-            Update Selected ({selected.size})
-          </button>
-          <button onClick={updateAll} disabled={loading || visiblePackages.length === 0} className="primary">
-            Update All View
-          </button>
+    <div className="container">
+      <header>
+        <h1>YouTube Clipper</h1>
+        <p>Download and cut videos with precision.</p>
+      </header>
+
+      <div className="input-group">
+        <label>YouTube URL</label>
+        <input
+          type="text"
+          placeholder="https://www.youtube.com/watch?v=..."
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+        />
+      </div>
+
+      <div className="row">
+        <div className="input-group">
+          <label>Start Time</label>
+          <input
+            type="text"
+            placeholder="00:00:00"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
+          />
         </div>
-        
-        <div className="package-list">
-          {loading && packages.length === 0 ? (
-            <div style={{ padding: '1rem' }}>Loading...</div>
-          ) : (
-            <>
-              <div className="package-item" style={{ backgroundColor: 'transparent' }}>
-                <label>
-                  <input 
-                    type="checkbox" 
-                    checked={visiblePackages.length > 0 && selected.size === visiblePackages.length}
-                    onChange={handleSelectAll}
-                  />
-                  <span>Select All</span>
-                </label>
-              </div>
-              {visiblePackages.map(pkg => {
-                const isOutdated = !!outdated[pkg.name];
-                return (
-                  <div key={pkg.name} className="package-item">
-                    <label>
-                      <input 
-                        type="checkbox" 
-                        checked={selected.has(pkg.name)}
-                        onChange={() => handleSelect(pkg.name)}
-                      />
-                      <div className={`package-info ${isOutdated ? 'outdated' : ''}`}>
-                        <div className="package-name">{pkg.name}</div>
-                        <div className="package-version">
-                          {pkg.version} 
-                          {isOutdated && (
-                            <>
-                              {' '}→ <span className="latest-version">{outdated[pkg.name].latest}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </label>
-                  </div>
-                );
-              })}
-            </>
-          )}
+        <div className="input-group">
+          <label>End Time</label>
+          <input
+            type="text"
+            placeholder="00:00:30"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
+          />
         </div>
       </div>
-      
-      <div className="right-pane">
-        <div className="terminal-log">
-          {logs}
+
+      <div className="input-group">
+        <label>Save To</label>
+        <div className="path-selector">
+          <input type="text" readOnly value={savePath} placeholder="Select path..." />
+          <button onClick={handleSelectPath}>Browse</button>
+        </div>
+      </div>
+
+      <button
+        className={`download-btn ${isDownloading ? "loading" : ""}`}
+        disabled={isDownloading}
+        onClick={startDownload}
+      >
+        {isDownloading ? "Processing..." : "Download & Cut Clip"}
+      </button>
+
+      <div className="terminal">
+        <div className="terminal-header">Logs</div>
+        <div className="terminal-content">
+          {logs.map((log, i) => (
+            <div key={i} className={`log-line ${log.level}`}>
+              <span className="timestamp">[{new Date().toLocaleTimeString()}]</span>{" "}
+              {log.message}
+            </div>
+          ))}
           <div ref={logEndRef} />
         </div>
       </div>

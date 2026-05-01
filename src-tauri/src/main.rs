@@ -6,6 +6,7 @@
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
+use std::thread;
 use tauri::{AppHandle, Manager};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -23,7 +24,7 @@ struct DownloadArgs {
 }
 
 #[tauri::command]
-async fn download_video(app: AppHandle, args: DownloadArgs) -> Result<String, String> {
+fn download_video(app: AppHandle, args: DownloadArgs) -> Result<String, String> {
     let url = args.url;
     let start = args.start_time;
     let end = args.end_time;
@@ -69,7 +70,7 @@ async fn download_video(app: AppHandle, args: DownloadArgs) -> Result<String, St
 
     // Read stdout in a separate task to stream logs
     let app_clone = app.clone();
-    tauri::async_runtime::spawn(async move {
+    thread::spawn(move || {
         let reader = BufReader::new(stdout);
         for line in reader.lines() {
             if let Ok(l) = line {
@@ -85,7 +86,7 @@ async fn download_video(app: AppHandle, args: DownloadArgs) -> Result<String, St
     });
 
     let app_clone_err = app.clone();
-    tauri::async_runtime::spawn(async move {
+    thread::spawn(move || {
         let reader = BufReader::new(stderr);
         for line in reader.lines() {
             if let Ok(l) = line {

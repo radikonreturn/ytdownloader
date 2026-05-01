@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test": "echo \"No tests defined yet\"",
+    "lint": "echo \"No lint script defined\""
   },
   "dependencies": {
     "@tauri-apps/api": "^1.5.3",

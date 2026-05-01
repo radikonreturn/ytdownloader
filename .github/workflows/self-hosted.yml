@@ -1,0 +1,42 @@
+name: "Localhost Build (Self-Hosted)"
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build-local:
+    # This tells GitHub to run the action on your local machine instead of their cloud servers
+    runs-on: self-hosted
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Frontend
+        run: npm run build
+
+      - name: Build Tauri App (Local)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: app-v__VERSION__
+          releaseName: "Release v__VERSION__"
+          releaseBody: "Automated release built on localhost"
+          releaseDraft: true
+          prerelease: false
+          args: --verbose

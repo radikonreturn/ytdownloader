@@ -4,8 +4,8 @@
 )]
 
 use serde::{Deserialize, Serialize};
-use std::process::{Command, Stdio};
 use std::io::{BufRead, BufReader};
+use std::process::{Command, Stdio};
 use tauri::{AppHandle, Manager};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -23,10 +23,7 @@ struct DownloadArgs {
 }
 
 #[tauri::command]
-async fn download_video(
-    app: AppHandle,
-    args: DownloadArgs,
-) -> Result<String, String> {
+async fn download_video(app: AppHandle, args: DownloadArgs) -> Result<String, String> {
     let url = args.url;
     let start = args.start_time;
     let end = args.end_time;
@@ -34,10 +31,13 @@ async fn download_video(
 
     // Helper to emit logs to frontend
     let emit_log = |msg: String, level: &str| {
-        let _ = app.emit_all("download-log", LogPayload {
-            message: msg,
-            level: level.to_string(),
-        });
+        let _ = app.emit_all(
+            "download-log",
+            LogPayload {
+                message: msg,
+                level: level.to_string(),
+            },
+        );
     };
 
     emit_log(format!("Starting download for: {}", url), "info");
@@ -48,11 +48,15 @@ async fn download_video(
     let mut child = Command::new("yt-dlp")
         .args([
             "--no-playlist",
-            "-f", "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/best[height<=1080]",
-            "--merge-output-format", "mp4",
-            "--download-sections", &section,
+            "-f",
+            "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/best[height<=1080]",
+            "--merge-output-format",
+            "mp4",
+            "--download-sections",
+            &section,
             "--force-keyframes-at-cuts",
-            "-o", &save_path,
+            "-o",
+            &save_path,
             &url,
         ])
         .stdout(Stdio::piped())
@@ -69,10 +73,13 @@ async fn download_video(
         let reader = BufReader::new(stdout);
         for line in reader.lines() {
             if let Ok(l) = line {
-                let _ = app_clone.emit_all("download-log", LogPayload {
-                    message: l,
-                    level: "info".to_string(),
-                });
+                let _ = app_clone.emit_all(
+                    "download-log",
+                    LogPayload {
+                        message: l,
+                        level: "info".to_string(),
+                    },
+                );
             }
         }
     });
@@ -82,10 +89,13 @@ async fn download_video(
         let reader = BufReader::new(stderr);
         for line in reader.lines() {
             if let Ok(l) = line {
-                let _ = app_clone_err.emit_all("download-log", LogPayload {
-                    message: l,
-                    level: "error".to_string(),
-                });
+                let _ = app_clone_err.emit_all(
+                    "download-log",
+                    LogPayload {
+                        message: l,
+                        level: "error".to_string(),
+                    },
+                );
             }
         }
     });
@@ -93,10 +103,16 @@ async fn download_video(
     let status = child.wait().map_err(|e| format!("Process error: {}", e))?;
 
     if status.success() {
-        emit_log("Download and cut completed successfully!".to_string(), "success");
+        emit_log(
+            "Download and cut completed successfully!".to_string(),
+            "success",
+        );
         Ok("Success".to_string())
     } else {
-        emit_log("yt-dlp failed. Check logs for details.".to_string(), "error");
+        emit_log(
+            "yt-dlp failed. Check logs for details.".to_string(),
+            "error",
+        );
         Err("yt-dlp exited with error".to_string())
     }
 }

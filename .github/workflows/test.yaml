@@ -27,7 +27,7 @@ jobs:
         run: npm install
 
       - name: Run Frontend Tests
-        run: npm test || echo "No tests defined"
+        run: npm test
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -40,10 +40,10 @@ jobs:
           workspaces: "./src-tauri -> target"
 
       - name: Cargo Format Check
-        run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check || echo "Formatting issues found"
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
 
       - name: Cargo Clippy
-        run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -W warnings || echo "Clippy warnings found"
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -W warnings
 
       - name: Run Cargo Tests
         run: cargo test --manifest-path src-tauri/Cargo.toml

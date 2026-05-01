@@ -8,6 +8,18 @@ Whether you need a specific 15-second soundbite or an entire 1080p video, YouTub
 
 ---
 
+## 📥 Download & Install (For Regular Users)
+
+You don't need any programming knowledge to use this app! Just download the installer and run it like any normal program.
+
+1. **Download the App**: Go to the **[Releases](../../releases/latest)** section on the right side of this GitHub page.
+2. **Get the Setup File**: Click on `YT Downloader_0.1.0_x64-setup.exe` to download it.
+3. **Install**: Double-click the downloaded `.exe` file to install the app on your Windows PC.
+   > **Note:** Because this is a brand new app, Windows SmartScreen might show a blue warning saying "Windows protected your PC." This is completely normal for new indie apps. Just click **"More info"** and then **"Run anyway"**.
+4. **Open**: Once installed, you will find "YT Downloader" in your Windows Start Menu!
+
+---
+
 ## ✨ Features
 
 - **Precise Video Clipping**: Enter a start and end time (e.g., `00:01:30` to `00:02:15`) to download exactly the segment you want. It saves bandwidth and time by only downloading the necessary parts of the video.
@@ -21,7 +33,7 @@ Whether you need a specific 15-second soundbite or an entire 1080p video, YouTub
 
 ## 🚀 How to Use
 
-1. **Launch the App**: Open `YT Downloader.exe`.
+1. **Launch the App**: Open the app from your Start Menu or Desktop.
 2. **Paste the URL**: Copy your desired YouTube video link and paste it into the "YouTube URL" field.
 3. **Choose Your Mode**:
    - **Clip Mode**: Leave the checkbox empty, and type in your exact Start and End times.
@@ -32,7 +44,7 @@ Whether you need a specific 15-second soundbite or an entire 1080p video, YouTub
 
 ---
 
-## ⚙️ Under the Hood
+## ⚙️ Under the Hood (For Developers)
 
 While this app has a simple interface, it is powered by industry-standard tools:
 - **Engine**: The downloads are handled by a managed instance of `yt-dlp` (via Python), ensuring maximum compatibility with YouTube's ever-changing architecture.

@@ -1,72 +1,39 @@
-# ytclip 🎬
+# YouTube Clipper 🎬
 
-Download a YouTube video and cut it to an exact time range — all in one command.
+A fast, lightweight, and user-friendly desktop application designed to download YouTube videos and precisely extract clips. 
 
-## Requirements
+Whether you need a specific 15-second soundbite or an entire 1080p video, YouTube Clipper handles it natively on your desktop without relying on ad-heavy web converters.
 
-| Tool | How to get it |
-|------|--------------|
-| Python 3.10+ | https://python.org |
-| **yt-dlp** | Auto-installed by the script via `pip` |
-| **ffmpeg** | `winget install --id=Gyan.FFmpeg -e` **or** `scoop install ffmpeg` |
-
-> **ffmpeg must be on PATH** (or placed as `bin\ffmpeg.exe` next to the script).
+![App Preview](app-icon-fixed.png) *(Logo concept)*
 
 ---
 
-## Usage
+## ✨ Features
 
-### Interactive mode (no arguments)
-```
-python ytclip.py
-```
-The script will prompt you for everything.
-
-### Command-line mode
-```
-python ytclip.py <URL> <start> <end> [output_name] [outdir]
-```
-
-| Argument | Description | Example |
-|----------|-------------|---------|
-| `URL` | Full YouTube URL | `https://youtu.be/dQw4w9WgXcQ` |
-| `start` | Start time | `1:30` or `90` or `0:01:30` |
-| `end` | End time | `2:45` or `165` or `0:02:45` |
-| `output_name` | *(optional)* Output filename without extension | `my_clip` |
-| `outdir` | *(optional)* Output directory | `./clips` |
-
-### Examples
-```bash
-# Basic — saves to current directory
-python ytclip.py https://youtu.be/dQw4w9WgXcQ 0:30 1:00
-
-# Custom name + output folder
-python ytclip.py https://youtu.be/dQw4w9WgXcQ 1:30 2:45 intro_clip ./clips
-
-# Using plain seconds
-python ytclip.py https://youtu.be/dQw4w9WgXcQ 90 165
-```
+- **Precise Video Clipping**: Enter a start and end time (e.g., `00:01:30` to `00:02:15`) to download exactly the segment you want. It saves bandwidth and time by only downloading the necessary parts of the video.
+- **Full Video Downloads**: Prefer the whole thing? Check the "Download Entire Video" option to bypass clipping and grab the full video.
+- **High Quality**: Automatically fetches the best available quality up to **1080p** (merging the best video and audio streams seamlessly into an MP4).
+- **Live Terminal Logs**: See exactly what is happening under the hood with a built-in terminal log viewer tracking the download progress in real-time.
+- **Sleek Dark Mode UI**: A modern, native interface built for speed and simplicity.
+- **No Playlists**: To prevent massive accidental downloads, playlist downloading is disabled by default—it focuses purely on the single video link you provide.
 
 ---
 
-## How it works
+## 🚀 How to Use
 
-1. **Fetch metadata** — gets the video title for a clean auto-generated filename.
-2. **Download clip** — uses `yt-dlp --download-sections` to download **only the requested segment** (no wasted bandwidth).
-3. **Fallback** — if `--download-sections` fails (some videos/formats), downloads the full video then cuts with `ffmpeg -ss … -t … -c copy`.
-4. **Verify** — confirms file size and probes duration with `ffprobe`.
-
-### Format selection priority
-```
-bestvideo[height<=1080][ext=mp4] + bestaudio[ext=m4a]   ← preferred (native mp4)
-bestvideo[height<=1080] + bestaudio                      ← any container, merged to mp4
-best[height<=1080]                                       ← single-stream fallback
-```
+1. **Launch the App**: Open `YT Downloader.exe`.
+2. **Paste the URL**: Copy your desired YouTube video link and paste it into the "YouTube URL" field.
+3. **Choose Your Mode**:
+   - **Clip Mode**: Leave the checkbox empty, and type in your exact Start and End times.
+   - **Full Video Mode**: Check "Download Entire Video (No Clipping)".
+4. **Select Output Location**: Click "Browse" to choose exactly where the `.mp4` file will be saved on your computer.
+5. **Download**: Click "Download & Cut Clip". You can watch the real-time progress in the Logs window on the right side.
+6. **Done!** Your video is ready to watch or edit.
 
 ---
 
-## Output filename (auto-generated)
-```
-{video_title}_{start}_to_{end}.mp4
-```
-Example: `Rick_Astley_Never_Gonna_Give_You_Up_0-30_to_1-00.mp4`
+## ⚙️ Under the Hood
+
+While this app has a simple interface, it is powered by industry-standard tools:
+- **Engine**: The downloads are handled by a managed instance of `yt-dlp` (via Python), ensuring maximum compatibility with YouTube's ever-changing architecture.
+- **Desktop Framework**: Built with **Tauri** and **React**, resulting in a tiny app footprint compared to traditional Electron apps, with lightning-fast performance.

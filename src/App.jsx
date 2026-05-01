@@ -10,6 +10,7 @@ function App() {
   const [savePath, setSavePath] = useState("");
   const [logs, setLogs] = useState([]);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [fullVideo, setFullVideo] = useState(false);
   const logEndRef = useRef(null);
 
   useEffect(() => {
@@ -56,6 +57,7 @@ function App() {
           start_time: startTime,
           end_time: endTime,
           save_path: savePath,
+          full_video: fullVideo,
         },
       });
     } catch (err) {
@@ -82,7 +84,18 @@ function App() {
         />
       </div>
 
-      <div className="row">
+      <div style={{ marginBottom: '1rem' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+          <input
+            type="checkbox"
+            checked={fullVideo}
+            onChange={(e) => setFullVideo(e.target.checked)}
+          />
+          Download Entire Video (No Clipping)
+        </label>
+      </div>
+
+      <div className={`row ${fullVideo ? 'disabled-row' : ''}`} style={{ opacity: fullVideo ? 0.5 : 1, pointerEvents: fullVideo ? 'none' : 'auto' }}>
         <div className="input-group">
           <label>Start Time</label>
           <input
@@ -90,6 +103,7 @@ function App() {
             placeholder="00:00:00"
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
+            disabled={fullVideo}
           />
         </div>
         <div className="input-group">
@@ -99,6 +113,7 @@ function App() {
             placeholder="00:00:30"
             value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
+            disabled={fullVideo}
           />
         </div>
       </div>

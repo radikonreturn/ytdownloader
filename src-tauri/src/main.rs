@@ -21,6 +21,7 @@ struct DownloadArgs {
     start_time: String,
     end_time: String,
     save_path: String,
+    full_video: bool,
 }
 
 #[tauri::command]
@@ -29,6 +30,7 @@ fn download_video(app: AppHandle, args: DownloadArgs) -> Result<String, String> 
     let start = args.start_time;
     let end = args.end_time;
     let save_path = args.save_path;
+    let full_video = args.full_video;
 
     // Helper to emit logs to frontend
     let emit_log = |msg: String, level: &str| {
@@ -43,27 +45,33 @@ fn download_video(app: AppHandle, args: DownloadArgs) -> Result<String, String> 
 
     emit_log(format!("Starting download for: {}", url), "info");
 
-    // Time format for yt-dlp --download-sections is *start-end
-    let section = format!("*{}-{}", start, end);
+    let mut cmd_args = vec![
+        "-m".to_string(),
+        "yt_dlp".to_string(),
+        "--no-playlist".to_string(),
+        "-f".to_string(),
+        "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/best[height<=1080]".to_string(),
+        "--merge-output-format".to_string(),
+        "mp4".to_string(),
+    ];
 
-    let mut child = Command::new("yt-dlp")
-        .args([
-            "--no-playlist",
-            "-f",
-            "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/best[height<=1080]",
-            "--merge-output-format",
-            "mp4",
-            "--download-sections",
-            &section,
-            "--force-keyframes-at-cuts",
-            "-o",
-            &save_path,
-            &url,
-        ])
+    if !full_video {
+        let section = format!("*{}-{}", start, end);
+        cmd_args.push("--download-sections".to_string());
+        cmd_args.push(section);
+        cmd_args.push("--force-keyframes-at-cuts".to_string());
+    }
+
+    cmd_args.push("-o".to_string());
+    cmd_args.push(save_path);
+    cmd_args.push(url);
+
+    let mut child = Command::new("python")
+        .args(&cmd_args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|e| format!("Failed to start yt-dlp: {}", e))?;
+        .map_err(|e| format!("Failed to start python -m yt_dlp: {}", e))?;
 
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();

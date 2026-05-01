@@ -1,111 +1,117 @@
-#![cfg_attr(
-    all(not(debug_assertions), target_os = "windows"),
-    windows_subsystem = "windows"
-)]
+// Prevents additional console window on Windows in release, DO NOT REMOVE!!
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use serde::{Deserialize, Serialize};
 use std::process::{Command, Stdio};
+use tauri::Window;
 use std::io::{BufRead, BufReader};
-use tauri::{AppHandle, Manager};
-use std::path::PathBuf;
+use std::thread;
 
-#[derive(Serialize, Deserialize, Clone)]
-struct LogPayload {
-    message: String,
-    level: String,
-}
+#[tauri::command]
+fn get_global_packages() -> Result<String, String> {
+    let output = if cfg!(target_os = "windows") {
+        Command::new("cmd")
+            .args(["/C", "npm list -g --depth=0 --json"])
+            .output()
+    } else {
+        Command::new("npm")
+            .args(["list", "-g", "--depth=0", "--json"])
+            .output()
+    };
 
-#[derive(Serialize, Deserialize)]
-struct DownloadArgs {
-    url: String,
-    start_time: String,
-    end_time: String,
-    save_path: String,
+    match output {
+        Ok(out) => Ok(String::from_utf8_lossy(&out.stdout).to_string()),
+        Err(e) => Err(e.to_string()),
+    }
 }
 
 #[tauri::command]
-async fn download_video(
-    app: AppHandle,
-    args: DownloadArgs,
-) -> Result<String, String> {
-    let url = args.url;
-    let start = args.start_time;
-    let end = args.end_time;
-    let save_path = args.save_path;
-
-    // Helper to emit logs to frontend
-    let emit_log = |msg: String, level: &str| {
-        let _ = app.emit_all("download-log", LogPayload {
-            message: msg,
-            level: level.to_string(),
-        });
+fn get_outdated_packages() -> Result<String, String> {
+    let output = if cfg!(target_os = "windows") {
+        Command::new("cmd")
+            .args(["/C", "npm outdated -g --json"])
+            .output()
+    } else {
+        Command::new("npm")
+            .args(["outdated", "-g", "--json"])
+            .output()
     };
 
-    emit_log(format!("Starting download for: {}", url), "info");
+    // npm outdated exits with code 1 if there are outdated packages, which is normal.
+    match output {
+        Ok(out) => {
+            let res = String::from_utf8_lossy(&out.stdout).to_string();
+            // npm outdated returns empty stdout if nothing is outdated
+            if res.trim().is_empty() {
+                Ok("{}".to_string())
+            } else {
+                Ok(res)
+            }
+        },
+        Err(e) => Err(e.to_string()),
+    }
+}
 
-    // We'll try to use yt-dlp with --download-sections first.
-    // Time format for yt-dlp --download-sections is *start-end
-    let section = format!("*{}-{}", start, end);
+#[tauri::command]
+fn update_packages(window: Window, packages: Vec<String>) -> Result<(), String> {
+    let mut args = vec!["install".to_string(), "-g".to_string()];
+    args.extend(packages);
 
-    let mut child = Command::new("yt-dlp")
-        .args([
-            "--no-playlist",
-            "-f", "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/best[height<=1080]",
-            "--merge-output-format", "mp4",
-            "--download-sections", &section,
-            "--force-keyframes-at-cuts",
-            "-o", &save_path,
-            &url,
-        ])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|e| format!("Failed to start yt-dlp: {}", e))?;
+    let mut child = if cfg!(target_os = "windows") {
+        let mut cmd_args = vec!["/C".to_string(), "npm".to_string()];
+        cmd_args.extend(args);
+        Command::new("cmd")
+            .args(&cmd_args)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|e| e.to_string())?
+    } else {
+        Command::new("npm")
+            .args(&args)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|e| e.to_string())?
+    };
 
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();
 
-    // Read stdout in a separate thread/task to stream logs
-    let app_clone = app.clone();
-    tokio::spawn(async move {
+    let window_clone = window.clone();
+    thread::spawn(move || {
         let reader = BufReader::new(stdout);
         for line in reader.lines() {
             if let Ok(l) = line {
-                let _ = app_clone.emit_all("download-log", LogPayload {
-                    message: l,
-                    level: "info".to_string(),
-                });
+                let _ = window_clone.emit("update-log", l);
             }
         }
     });
 
-    let app_clone_err = app.clone();
-    tokio::spawn(async move {
+    let window_clone2 = window.clone();
+    thread::spawn(move || {
         let reader = BufReader::new(stderr);
         for line in reader.lines() {
             if let Ok(l) = line {
-                let _ = app_clone_err.emit_all("download-log", LogPayload {
-                    message: l,
-                    level: "error".to_string(),
-                });
+                let _ = window_clone2.emit("update-log", l);
             }
         }
     });
 
-    let status = child.wait().map_err(|e| format!("Process error: {}", e))?;
-
-    if status.success() {
-        emit_log("Download and cut completed successfully!".to_string(), "success");
-        Ok("Success".to_string())
-    } else {
-        emit_log("yt-dlp failed. Check logs for details.".to_string(), "error");
-        Err("yt-dlp exited with error".to_string())
+    let status = child.wait().map_err(|e| e.to_string())?;
+    if !status.success() {
+        return Err("npm update failed".to_string());
     }
+
+    Ok(())
 }
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![download_video])
+        .invoke_handler(tauri::generate_handler![
+            get_global_packages,
+            get_outdated_packages,
+            update_packages
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

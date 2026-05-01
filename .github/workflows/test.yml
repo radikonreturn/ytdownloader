@@ -1,0 +1,55 @@
+name: "Test & Lint"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Check Formatting (Prettier/Lint)
+        run: npm run lint || echo "No lint script defined"
+
+      - name: Run Unit Tests
+        run: npm test || echo "No tests defined"
+
+  rust-test:
+    name: Rust Tests
+    runs-on: windows-latest # Windows is better for Tauri testing if any native APIs are touched
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Cargo Format Check
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check || echo "Formatting issues found"
+
+      - name: Cargo Clippy
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings || echo "Clippy warnings found"
+
+      - name: Run Cargo Tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml

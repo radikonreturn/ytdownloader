@@ -10,6 +10,8 @@
     "start": "tauri dev",
     "build": "vite build",
     "build:app": "tauri build",
+    "setup": "tauri build --bundles nsis",
+    "setup:msi": "tauri build --bundles msi",
     "preview": "vite preview",
     "tauri": "tauri",
     "test": "echo \"No tests defined yet\"",

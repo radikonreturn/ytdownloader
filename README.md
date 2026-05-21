@@ -22,7 +22,7 @@ You don't need any programming knowledge to use this app! Just download the inst
 
 ## ✨ Features
 
-- **Precise Video Clipping**: Enter a start and end time (e.g., `00:01:30` to `00:02:15`) to download exactly the segment you want. It saves bandwidth and time by only downloading the necessary parts of the video.
+- **Precise Video Clipping**: Use the visual dual-thumb timeline slider to select your exact start and end times to download precisely the segment you want. It saves bandwidth and time by only downloading the necessary parts of the video.
 - **Full Video Downloads**: Prefer the whole thing? Check the "Download Entire Video" option to bypass clipping and grab the full video.
 - **High Quality**: Automatically fetches the best available quality up to **1080p** (merging the best video and audio streams seamlessly into an MP4).
 - **Live Terminal Logs**: See exactly what is happening under the hood with a built-in terminal log viewer tracking the download progress in real-time.
@@ -36,7 +36,7 @@ You don't need any programming knowledge to use this app! Just download the inst
 1. **Launch the App**: Open the app from your Start Menu or Desktop.
 2. **Paste the URL**: Copy your desired YouTube video link and paste it into the "YouTube URL" field.
 3. **Choose Your Mode**:
-   - **Clip Mode**: Leave the checkbox empty, and type in your exact Start and End times.
+   - **Clip Mode**: Leave the checkbox empty, and use the timeline slider to drag the start and end points for your clip.
    - **Full Video Mode**: Check "Download Entire Video (No Clipping)".
 4. **Select Output Location**: Click "Browse" to choose exactly where the `.mp4` file will be saved on your computer.
 5. **Download**: Click "Download & Cut Clip". You can watch the real-time progress in the Logs window on the right side.

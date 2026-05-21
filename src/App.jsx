@@ -6,8 +6,9 @@ import { downloadDir, join } from "@tauri-apps/api/path";
 
 function App() {
   const [url, setUrl] = useState("");
-  const [startTime, setStartTime] = useState("00:00:00");
-  const [endTime, setEndTime] = useState("00:00:30");
+  const [duration, setDuration] = useState(0);
+  const [startVal, setStartVal] = useState(0);
+  const [endVal, setEndVal] = useState(30);
   const [savePath, setSavePath] = useState("");
   const [logs, setLogs] = useState([]);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -74,7 +75,9 @@ function App() {
       try {
         setLogs(prev => [...prev, { message: "Fetching video info...", level: "info" }]);
         const info = await invoke("get_video_info", { url });
-        setEndTime(formatTime(info.duration));
+        setDuration(info.duration);
+        setStartVal(0);
+        setEndVal(Math.min(30, info.duration));
         setVideoTitle(info.title);
         setLogs(prev => [...prev, { message: `Found: ${info.title} (${formatTime(info.duration)})`, level: "success" }]);
         
@@ -126,8 +129,8 @@ function App() {
       await invoke("download_video", {
         args: {
           url,
-          start_time: startTime,
-          end_time: endTime,
+          start_time: formatTime(startVal),
+          end_time: formatTime(endVal),
           save_path: savePath,
           full_video: fullVideo,
           video_quality: videoQuality,
@@ -139,7 +142,7 @@ function App() {
       setHistory(prev => [{
         url,
         title: videoTitle || "Unknown Video",
-        time: fullVideo ? "Full Video" : `${startTime} - ${endTime}`,
+        time: fullVideo ? "Full Video" : `${formatTime(startVal)} - ${formatTime(endVal)}`,
         format,
         date: new Date().toLocaleString(),
         path: savePath
@@ -291,25 +294,42 @@ function App() {
         </label>
       </div>
 
-      <div className={`row ${fullVideo ? 'disabled-row' : ''}`} style={{ opacity: fullVideo ? 0.5 : 1, pointerEvents: fullVideo ? 'none' : 'auto' }}>
-        <div className="input-group">
-          <label>Start Time</label>
-          <input
-            type="text"
-            placeholder="00:00:00"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            disabled={fullVideo}
-          />
+      <div className={`timeline-container ${fullVideo ? 'disabled-timeline' : ''}`} style={{ opacity: fullVideo ? 0.5 : 1, pointerEvents: fullVideo ? 'none' : 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--info-color)' }}>Start: {formatTime(startVal)}</span>
+          <span style={{ fontSize: '0.8rem', color: 'var(--info-color)' }}>End: {formatTime(endVal)}</span>
         </div>
-        <div className="input-group">
-          <label>End Time</label>
+        <div className="dual-slider">
+          <div className="slider-track"></div>
+          <div className="slider-range" style={{
+            left: `${duration > 0 ? (startVal / duration) * 100 : 0}%`,
+            width: `${duration > 0 ? ((endVal - startVal) / duration) * 100 : 100}%`
+          }}></div>
           <input
-            type="text"
-            placeholder="00:00:30"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-            disabled={fullVideo}
+            type="range"
+            min="0"
+            max={duration || 100}
+            value={startVal}
+            onChange={(e) => {
+              let val = parseInt(e.target.value);
+              if (val > endVal - 1) val = endVal - 1;
+              setStartVal(val);
+            }}
+            disabled={fullVideo || duration === 0}
+            className="thumb-left"
+          />
+          <input
+            type="range"
+            min="0"
+            max={duration || 100}
+            value={endVal}
+            onChange={(e) => {
+              let val = parseInt(e.target.value);
+              if (val < startVal + 1) val = startVal + 1;
+              setEndVal(val);
+            }}
+            disabled={fullVideo || duration === 0}
+            className="thumb-right"
           />
         </div>
       </div>

@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "fast": "vite --host 127.0.0.1",
+    "app": "tauri dev",
+    "start": "tauri dev",
     "build": "vite build",
+    "build:app": "tauri build",
     "preview": "vite preview",
     "tauri": "tauri",
     "test": "echo \"No tests defined yet\"",
